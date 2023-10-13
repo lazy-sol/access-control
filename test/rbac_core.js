@@ -19,6 +19,6 @@ contract("AccessControl (RBAC) Core tests", function(accounts) {
 	// a1, a2,... – working accounts to perform tests on
 	const [A0, a0, H0, a1, a2, a3] = accounts;
 
-	// run the core ACL behaviour test
+	// run the core RBACs behaviour test
 	behavesLikeRBAC(deploy_access_control, a0, a1, a2);
 });

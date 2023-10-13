@@ -45,7 +45,7 @@ async function deploy_access_control(a0) {
  * @param target target OZ Ownable contract address or instance, optional
  * @returns OwnableToAccessControlAdapter instance
  */
-async function deploy_ownable_to_acl_adapter(a0, target) {
+async function deploy_ownable_to_ac_adapter(a0, target) {
 	// deploy the target if required
 	if(!target) {
 		target = await deploy_usdt(a0);
@@ -57,7 +57,7 @@ async function deploy_ownable_to_acl_adapter(a0, target) {
 	}
 
 	// deploy adapter
-	const adapter = await deploy_no_deps_ownable_to_acl_adapter(a0, target);
+	const adapter = await deploy_no_deps_ownable_to_ac_adapter(a0, target);
 
 	// transfer ownership to the adapter
 	await target.transferOwnership(adapter.address, {from: a0});
@@ -73,7 +73,7 @@ async function deploy_ownable_to_acl_adapter(a0, target) {
  * @param target target OZ Ownable contract address or instance, required
  * @returns OwnableToAccessControlAdapter instance
  */
-async function deploy_no_deps_ownable_to_acl_adapter(a0, target) {
+async function deploy_no_deps_ownable_to_ac_adapter(a0, target) {
 	// artifacts in use
 	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
 	// deploy and return the deployd instance
@@ -102,7 +102,7 @@ async function deploy_adapter_factory(a0) {
  * @param target Ownable instance or address, optional
  * @returns OwnableToAccessControlAdapter instance
  */
-async function factory_deploy_ownable_to_acl_adapter(a0, factory, target) {
+async function factory_deploy_ownable_to_ac_adapter(a0, factory, target) {
 	if(!factory) {
 		factory = await deploy_adapter_factory(a0);
 	}
@@ -141,8 +141,8 @@ async function factory_deploy_ownable_to_acl_adapter(a0, factory, target) {
 module.exports = {
 	deploy_usdt,
 	deploy_access_control,
-	deploy_no_deps_ownable_to_acl_adapter,
-	deploy_ownable_to_acl_adapter,
+	deploy_no_deps_ownable_to_ac_adapter,
+	deploy_ownable_to_ac_adapter,
 	deploy_adapter_factory,
-	factory_deploy_ownable_to_acl_adapter,
+	factory_deploy_ownable_to_ac_adapter,
 }

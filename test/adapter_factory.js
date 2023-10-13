@@ -21,7 +21,7 @@ const {
 const {
 	deploy_usdt,
 	deploy_adapter_factory,
-	factory_deploy_ownable_to_acl_adapter,
+	factory_deploy_ownable_to_ac_adapter,
 } = require("./include/deployment_routines");
 
 // run AdapterFactory tests
@@ -40,12 +40,12 @@ contract("AdapterFactory tests", function(accounts) {
 	});
 
 	it("adapter deployment fails if executed not by the ownable owner", async function() {
-		await expectRevert(factory_deploy_ownable_to_acl_adapter(a2, factory, usdt), "not an owner");
+		await expectRevert(factory_deploy_ownable_to_ac_adapter(a2, factory, usdt), "not an owner");
 	});
 	describe("adapter deployment succeeds if executed by the ownable owner", async function() {
 		let adapter;
 		beforeEach(async function() {
-			({adapter} = await factory_deploy_ownable_to_acl_adapter(a1, factory, usdt));
+			({adapter} = await factory_deploy_ownable_to_ac_adapter(a1, factory, usdt));
 		});
 		it("adapter's target is set correctly", async function() {
 			expect(await adapter.target()).to.be.equal(usdt.address);

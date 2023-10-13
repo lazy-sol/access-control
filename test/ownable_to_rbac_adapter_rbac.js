@@ -17,7 +17,7 @@ const {
 	MAX_UINT256,
 } = constants;
 
-// ACL core features and roles
+// RBAC core features and roles
 const {
 	not,
 	ROLE_ACCESS_ROLES_MANAGER,
@@ -25,7 +25,7 @@ const {
 
 // deployment routines in use
 const {
-	deploy_ownable_to_acl_adapter,
+	deploy_ownable_to_ac_adapter,
 } = require("./include/deployment_routines");
 
 // run OwnableToAccessControlAdapter: RBAC tests
@@ -40,7 +40,7 @@ contract("OwnableToAccessControlAdapter: RBAC tests", function(accounts) {
 	describe("after the Adapter is deployed and target Ownable ownership transferred to the Adapter", function() {
 		let target, adapter;
 		beforeEach(async function() {
-			({target, adapter} = await deploy_ownable_to_acl_adapter(a0));
+			({target, adapter} = await deploy_ownable_to_ac_adapter(a0));
 		});
 
 		it("it is impossible to configure the access role from unauthorized account", async function() {

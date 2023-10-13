@@ -20,39 +20,39 @@ const {
 	random_bn255,
 } = require("./bn_utils");
 
-// ACL core features and roles
+// RBAC core features and roles
 const {
 	not,
 	ROLE_ACCESS_MANAGER,
 } = require("./features_roles");
 
 /**
- * ACL core behaviour
+ * RBAC core behaviour
  *
- * @param deployment_fn ACL contract deployment function
+ * @param deployment_fn RBAC contract deployment function
  * @param a0 deployer/admin account
  * @param a1 participant 1
  * @param a2 participant 2
  */
-function behavesLikeACL(deployment_fn, a0, a1, a2) {
+function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 	// define the "players"
 	const by = a1;
 	const to = a2;
 
-	// deploy the ACL
-	let acl;
+	// deploy the access control
+	let access_control;
 	beforeEach(async function() {
-		acl = await deployment_fn.call(this, a0);
+		access_control = await deployment_fn.call(this, a0);
 	});
 
 	function test_suite(write_fn, read_fn, check_fn, to_fn) {
 		describe("when performed by ACCESS_MANAGER", function() {
 			beforeEach(async function() {
-				await acl.updateRole(by, ROLE_ACCESS_MANAGER, {from: a0});
+				await access_control.updateRole(by, ROLE_ACCESS_MANAGER, {from: a0});
 			});
 			describe("when ACCESS_MANAGER has full set of permissions", function() {
 				beforeEach(async function() {
-					await acl.updateRole(by, MAX_UINT256, {from: a0});
+					await access_control.updateRole(by, MAX_UINT256, {from: a0});
 				});
 				describe("what you set", function() {
 					let receipt, set;
@@ -155,7 +155,7 @@ function behavesLikeACL(deployment_fn, a0, a1, a2) {
 				beforeEach(async function() {
 					// do not touch the highest permission bit (ACCESS_MANAGER permission)
 					role = random_bn255();
-					await acl.updateRole(by, ROLE_ACCESS_MANAGER.or(role), {from: a0});
+					await access_control.updateRole(by, ROLE_ACCESS_MANAGER.or(role), {from: a0});
 				});
 				describe("what you get", function() {
 					let receipt, set;
@@ -209,64 +209,64 @@ function behavesLikeACL(deployment_fn, a0, a1, a2) {
 				beforeEach(async function() {
 					// do not touch the highest permission bit (ACCESS_MANAGER permission)
 					const role = random_bn255();
-					await acl.updateRole(by, ROLE_ACCESS_MANAGER.or(role), {from: a0});
+					await access_control.updateRole(by, ROLE_ACCESS_MANAGER.or(role), {from: a0});
 				});
 				it("and degrades to zero with the 99.99% probability in 14 runs", async function() {
 					// randomly remove 255 bits of permissions
 					for(let i = 0; i < 14; i++) {
 						// do not touch the highest permission bit (ACCESS_MANAGER permission)
 						const role = random_bn255();
-						await acl.updateRole(by, not(role), {from: by});
+						await access_control.updateRole(by, not(role), {from: by});
 					}
 					// this may fail with the probability 2^(-14) < 0.01%
-					expect(await acl.getRole(by)).to.be.bignumber.that.equals(ROLE_ACCESS_MANAGER);
+					expect(await access_control.getRole(by)).to.be.bignumber.that.equals(ROLE_ACCESS_MANAGER);
 				})
 			});
 			describe("when ACCESS_MANAGER grants ACCESS_MANAGER permission", function() {
 				beforeEach(async function() {
-					await acl.updateRole(to, ROLE_ACCESS_MANAGER, {from: by});
+					await access_control.updateRole(to, ROLE_ACCESS_MANAGER, {from: by});
 				});
 				it("operator becomes an ACCESS_MANAGER", async function() {
-					expect(await acl.isOperatorInRole(to, ROLE_ACCESS_MANAGER), "operator").to.be.true;
-					expect(await acl.isSenderInRole(ROLE_ACCESS_MANAGER, {from: to}), "sender").to.be.true;
+					expect(await access_control.isOperatorInRole(to, ROLE_ACCESS_MANAGER), "operator").to.be.true;
+					expect(await access_control.isSenderInRole(ROLE_ACCESS_MANAGER, {from: to}), "sender").to.be.true;
 				});
 			});
 			describe("when ACCESS_MANAGER revokes ACCESS_MANAGER permission from itself", function() {
 				beforeEach(async function() {
-					await acl.updateRole(by, 0, {from: by});
+					await access_control.updateRole(by, 0, {from: by});
 				});
 				it("operator ceases to be an ACCESS_MANAGER", async function() {
-					expect(await acl.isOperatorInRole(by, ROLE_ACCESS_MANAGER), "operator").to.be.false;
-					expect(await acl.isSenderInRole(ROLE_ACCESS_MANAGER, {from: by}), "sender").to.be.false;
+					expect(await access_control.isOperatorInRole(by, ROLE_ACCESS_MANAGER), "operator").to.be.false;
+					expect(await access_control.isSenderInRole(ROLE_ACCESS_MANAGER, {from: by}), "sender").to.be.false;
 				});
 			});
 		});
 		describe("otherwise (no ACCESS_MANAGER permission)", function() {
 			it("updateFeatures reverts", async function() {
-				await expectRevert(acl.updateFeatures(1, {from: by}), "access denied");
+				await expectRevert(access_control.updateFeatures(1, {from: by}), "access denied");
 			});
 			it("updateRole reverts", async function() {
-				await expectRevert(acl.updateRole(to, 1, {from: by}), "access denied");
+				await expectRevert(access_control.updateRole(to, 1, {from: by}), "access denied");
 			});
 		});
 	}
 
 	// run two test suites to test get/set role and get/set features
 	test_suite(
-		async(by, to, set) => await acl.updateRole(to, set, {from: by}),
-		async(op) => await acl.getRole(op),
-		async(op, role) => await acl.isOperatorInRole(op, role),
+		async(by, to, set) => await access_control.updateRole(to, set, {from: by}),
+		async(op) => await access_control.getRole(op),
+		async(op, role) => await access_control.isOperatorInRole(op, role),
 		(to) => to
 	);
 	test_suite(
-		async(by, to, set) => await acl.updateFeatures(set, {from: by}),
-		async(op) => await acl.features(),
-		async(op, role) => await acl.isFeatureEnabled(role),
-		(to) => acl.address
+		async(by, to, set) => await access_control.updateFeatures(set, {from: by}),
+		async(op) => await access_control.features(),
+		async(op, role) => await access_control.isFeatureEnabled(role),
+		(to) => access_control.address
 	);
 }
 
-// export the ACL core behaviour
+// export the RBAC core behaviour
 module.exports = {
-	behavesLikeRBAC: behavesLikeACL,
+	behavesLikeRBAC,
 }

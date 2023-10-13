@@ -19,8 +19,8 @@ const {
 
 // deployment routines in use
 const {
-	deploy_ownable_to_acl_adapter,
-	deploy_no_deps_ownable_to_acl_adapter,
+	deploy_ownable_to_ac_adapter,
+	deploy_no_deps_ownable_to_ac_adapter,
 } = require("./include/deployment_routines");
 
 // run OwnableToAccessControlAdapter tests
@@ -33,12 +33,12 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 	const [A0, a0, H0, a1, a2, a3] = accounts;
 
 	it("Adapter won't deploy targeting to a zero address", async function() {
-		await expectRevert(deploy_no_deps_ownable_to_acl_adapter(a0, ZERO_ADDRESS), "zero address");
+		await expectRevert(deploy_no_deps_ownable_to_ac_adapter(a0, ZERO_ADDRESS), "zero address");
 	});
 	describe("after the Adapter is deployed and target Ownable ownership transferred to the Adapter", function() {
 		let target, adapter;
 		beforeEach(async function() {
-			({target, adapter} = await deploy_ownable_to_acl_adapter(a0));
+			({target, adapter} = await deploy_ownable_to_ac_adapter(a0));
 		});
 
 		it("it is impossible to send ether to the non-payable target contract via the adapter", async function() {

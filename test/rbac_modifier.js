@@ -33,17 +33,17 @@ contract('AccessControl (RBAC) "restrictedTo" Modifier tests', function(accounts
 
 	// `restrictedTo` modifier check
 	describe("restrictedTo modifier check", function() {
-		let acl;
+		let access_control;
 		beforeEach(async function() {
-			acl = await deploy_access_control(a0);
+			access_control = await deploy_access_control(a0);
 		});
 		it("function protected with restrictedTo modifier fails when run not by an admin", async function() {
-			await expectRevert(acl.restricted({from: a1}), "access denied");
+			await expectRevert(access_control.restricted({from: a1}), "access denied");
 		});
 		describe("function protected with restrictedTo modifier succeeds when run by admin", async function() {
 			let receipt;
 			beforeEach(async function() {
-				receipt = await acl.restricted({from: a0});
+				receipt = await access_control.restricted({from: a0});
 			});
 			it('"Restricted" event is emitted', async function() {
 				expectEvent(receipt, "Restricted");
