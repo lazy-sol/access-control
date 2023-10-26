@@ -20,7 +20,12 @@ build/
 
 # hardhat
 cache/
-artifacts/
+!/artifacts/
+/artifacts/**
+!/artifacts/contracts/
+/artifacts/contracts/**
+!/artifacts/contracts/OwnableToAccessControlAdapter.sol/
+!/artifacts/contracts/OwnableToAccessControlAdapter.sol/OwnableToAccessControlAdapter.json
 
 # etc
 *.log
