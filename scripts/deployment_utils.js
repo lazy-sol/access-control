@@ -36,7 +36,7 @@ async function print_contract_details(a0, abi, address, operator_address) {
 		// ignored
 	}
 
-	// try to read ACL data
+	// try to read RBAC data
 	try {
 		const features = toBN(await web3_contract.methods.features().call());
 		const r0 = toBN(await web3_contract.methods.getRole(a0).call());
