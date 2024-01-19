@@ -111,7 +111,7 @@ contract OwnableToAccessControlAdapter is AccessControl {
 	 * @param _target target OZ Ownable contract address
 	 * @param _owner smart contract owner having full privileges
 	 */
-	constructor(address _target, address _owner) public AccessControl(_owner) {
+	constructor(address _target, address _owner) public AccessControl(_owner, 0) {
 		// verify the inputs
 		require(_target != address(0), "zero address");
 

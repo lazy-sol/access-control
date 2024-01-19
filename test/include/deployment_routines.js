@@ -25,15 +25,17 @@ async function deploy_usdt(a0, H0 = a0) {
 /**
  * Deploys AccessControl contract
  *
- * @param a0 smart contract deployer, owner, super admin
+ * @param a0 smart contract deployer
+ * @param owner smart contract owner, super admin, optional
+ * @param features initial smart contract features, optional
  * @returns AccessControl instance
  */
-async function deploy_access_control(a0) {
+async function deploy_access_control(a0, owner = a0, features = 0) {
 	// deploy AccessControlMock
 	const AccessControlMock = artifacts.require("AccessControlMock");
 
 	// deploy and return the instance
-	return await AccessControlMock.new(a0, {from: a0});
+	return await AccessControlMock.new(owner, features, {from: a0});
 }
 
 /**

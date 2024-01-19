@@ -111,11 +111,14 @@ abstract contract AccessControl {
 	/**
 	 * @notice Creates an access control instance, setting the contract owner to have full privileges
 	 *
-	 * @param _owner smart contract owner having full privileges
+	 * @param _owner smart contract owner having full privileges, can be zero
+	 * @param _features initial features mask of the contract, can be zero
 	 */
-	constructor(address _owner) internal { // visibility modifier is required to be compilable with 0.6.x
+	constructor(address _owner, uint256 _features) internal { // visibility modifier is required to be compilable with 0.6.x
 		// grant owner full privileges
 		__setRole(_owner, FULL_PRIVILEGES_MASK, FULL_PRIVILEGES_MASK);
+		// update initial features bitmask
+		__setRole(address(this), _features, _features);
 	}
 
 	/**

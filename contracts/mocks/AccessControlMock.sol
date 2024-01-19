@@ -7,7 +7,7 @@ import "../AccessControl.sol";
 contract AccessControlMock is AccessControl {
 	uint32 public constant RESTRICTED_ROLE = 1;
 	event Restricted();
-	constructor(address _owner) AccessControl(_owner){}
+	constructor(address _owner, uint256 _features) AccessControl(_owner, _features){}
 	function restricted() public restrictedTo(RESTRICTED_ROLE) {
 		emit Restricted();
 	}
