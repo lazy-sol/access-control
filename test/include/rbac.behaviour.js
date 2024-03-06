@@ -15,11 +15,11 @@ const {
 	MAX_UINT256,
 } = constants;
 
-// BN constants and utilities
+// BN utils
 const {
 	random_bn255,
 	random_bn256,
-} = require("./bn_utils");
+} = require("@lazy-sol/a-missing-jem/bn_utils");
 
 // RBAC core features and roles
 const {

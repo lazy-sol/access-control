@@ -27,7 +27,7 @@ so that only a pre-configured set of accounts can execute it.
      *
      * @notice Zeppelin based ERC20 implementation with the RBAC support
      *
-     * @author Lazy Soul
+     * @author Lazy So[u]l
      */
     contract MyERC20Token is ERC20, AccessControl {
         
