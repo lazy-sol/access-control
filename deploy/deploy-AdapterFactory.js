@@ -1,5 +1,5 @@
-// deploy: npx hardhat deploy --network goerli --tags AdapterFactory
-// verify: npx hardhat etherscan-verify --network goerli --api-key $ETHERSCAN_KEY
+// deploy: npx hardhat deploy --network sepolia --tags AdapterFactory
+// verify: npx hardhat etherscan-verify --network sepolia --api-key $ETHERSCAN_KEY
 
 // script is built for hardhat-deploy plugin:
 // A Hardhat Plugin For Replicable Deployments And Easy Testing
@@ -9,7 +9,7 @@
 const {
 	print_amt,
 	print_contract_details,
-} = require("@lazy-sol/a-missing-jem/deployment_utils");
+} = require("@lazy-sol/a-missing-gem/deployment_utils");
 
 // to be picked up and executed by hardhat-deploy plugin
 module.exports = async function({deployments, getChainId, getNamedAccounts, getUnnamedAccounts}) {
