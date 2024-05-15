@@ -25,7 +25,7 @@ const {
 const {
 	not,
 	ROLE_ACCESS_MANAGER, FULL_PRIVILEGES_MASK,
-} = require("./features_roles");
+} = require("../../scripts/include/features_roles");
 
 /**
  * RBAC core behaviour
