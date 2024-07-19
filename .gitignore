@@ -75,6 +75,9 @@ cache/
 !/artifacts/contracts/OwnableToAccessControlAdapter.sol/
 !/artifacts/contracts/OwnableToAccessControlAdapter.sol/OwnableToAccessControlAdapter.json
 
+# typechain
+typechain
+
 # etc
 *.log
 keys.js
