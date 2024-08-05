@@ -9,6 +9,9 @@ const {
 	not,
 } = require("./scripts/include/features_roles");
 
+// RBAC behaviours
+const {behavesLikeRBAC} = require("./test/include/rbac.behaviour");
+
 // Re-export the functions
 module.exports = {
 	ROLE_ACCESS_MANAGER,
@@ -16,4 +19,5 @@ module.exports = {
 	FULL_PRIVILEGES_MASK,
 	or,
 	not,
+	behavesLikeRBAC,
 };

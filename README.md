@@ -81,21 +81,6 @@ Our implementation is more lightweight:
 * it allows setting up to 256 roles at once, in a single transaction, while Zeppelin allows setting only one role in a
   single transaction
 
-## Upgradeability
-
-[Upgradeable Access Control](https://github.com/lazy-sol/access-control-upgradeable) is a Role-based Access Control
-extension supporting the OpenZeppelin UUPS Proxy upgrades. Smart contracts inheriting from the
-`UpgradeableAccessControl` can be deployed behind the ERC1967 proxy and will get the upgradeability mechanism setup.
-
-Upgradeable Access Control introduces another “special” permission bit 254 which is reserved for an upgrade manager role
-`ROLE_UPGRADE_MANAGER` which is allowed to and is responsible for implementation upgrades of the ERC1967 Proxy.
-
-Being controlled by the upgrade manager, the upgradeability is also a revocable feature of the smart contract: the
-`upgradeTo` restricted function access can be revoked from all the admin accounts.
-
-The best practice is to disable contract upgradeability when the protocol is mature enough and has already proven its
-security and stability.
-
 ## Installation
 ```
 npm i -D @lazy-sol/access-control
