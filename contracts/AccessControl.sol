@@ -5,7 +5,7 @@
 // hardhat (0.4.11)
 pragma solidity >=0.8.4;
 
-import {AccessControlCore} from "./AccessControlCore.sol";
+import "./AccessControlCore.sol";
 
 /**
  * @title Role-based Access Control (RBAC)
@@ -56,7 +56,7 @@ import {AccessControlCore} from "./AccessControlCore.sol";
  *
  * @author Basil Gorin
  */
-contract AccessControl is AccessControlCore {
+abstract contract AccessControl is AccessControlCore {
 	/**
 	 * @notice Creates an access control instance, setting the contract owner to have full privileges
 	 *
