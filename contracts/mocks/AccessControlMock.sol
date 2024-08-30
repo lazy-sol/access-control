@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22;
+pragma solidity >=0.8.4;
 
 import "../AccessControl.sol";
 
@@ -10,5 +10,11 @@ contract AccessControlMock is AccessControl {
 	constructor(address _owner, uint256 _features) AccessControl(_owner, _features){}
 	function restricted() public restrictedTo(RESTRICTED_ROLE) {
 		emit Restricted();
+	}
+	function requireSenderInRole(uint256 required) public view {
+		_requireSenderInRole(required);
+	}
+	function requireAccessCondition(bool condition) public pure {
+		_requireAccessCondition(condition);
 	}
 }

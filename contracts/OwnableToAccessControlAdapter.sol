@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2; // breaking changes in .call() (0.5.0), allow .call{}() (0.6.2)
+// breaking changes in .call() (0.5.0)
+// allow .call{}() (0.6.2)
+pragma solidity >=0.8.4;
 
 import "./AccessControl.sol";
 
@@ -63,7 +65,7 @@ import "./AccessControl.sol";
  *
  * @author Basil Gorin
  */
-contract OwnableToAccessControlAdapter is AccessControl {
+contract OwnableToAccessControlAdapter is AccessControlCore {
 	/**
 	 * @dev Target OZ Ownable contract AccessControl Adapter executes the transactions on
 	 *
@@ -111,7 +113,7 @@ contract OwnableToAccessControlAdapter is AccessControl {
 	 * @param _target target OZ Ownable contract address
 	 * @param _owner smart contract owner having full privileges
 	 */
-	constructor(address _target, address _owner) public AccessControl(_owner, 0) {
+	constructor(address _target, address _owner) AccessControlCore(_owner, 0) { // visibility modifier is required to be compilable with 0.6.x
 		// verify the inputs
 		require(_target != address(0), "zero address");
 
@@ -148,7 +150,7 @@ contract OwnableToAccessControlAdapter is AccessControl {
 	 */
 	function updateAccessRole(bytes4 selector, uint256 role) public {
 		// verify the access permission
-		require(isSenderInRole(ROLE_ACCESS_ROLES_MANAGER), "access denied");
+		_requireSenderInRole(ROLE_ACCESS_ROLES_MANAGER);
 
 		// update the function access role
 		accessRoles[selector] = role;
@@ -190,7 +192,7 @@ contract OwnableToAccessControlAdapter is AccessControl {
 			require(roleRequired != 0, "access role not set");
 
 			// verify the access permission
-			require(isSenderInRole(roleRequired), "access denied");
+			_requireSenderInRole(roleRequired);
 		}
 
 		// execute the call on the target

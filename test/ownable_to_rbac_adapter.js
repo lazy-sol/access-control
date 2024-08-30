@@ -72,7 +72,7 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 					from: a1,
 					to: adapter.address,
 					data: target.contract.methods.transferOwnership(a2).encodeABI(),
-				}), "access denied");
+				}), "AccessDenied()");
 			});
 			describe("once an account has authorization to execute transferOwnership function", function() {
 				beforeEach(async function() {

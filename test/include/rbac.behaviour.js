@@ -41,6 +41,18 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 	const by = a1;
 	const to = a2;
 
+	describe("requireAccessCondition(condition) pure function", function() {
+		let access_control;
+		beforeEach(async function() {
+			access_control = await deployment_fn.call(this, a0, ZERO_ADDRESS, 0);
+		});
+		it("throws if condition is false", async function() {
+			await expectRevert(access_control.requireAccessCondition(false, {from: a0}), "AccessDenied()");
+		});
+		it("succeeds if condition is true", async function() {
+			await access_control.requireAccessCondition(true, {from: a0});
+		});
+	});
 	describe("deployment and initial state", function() {
 		function deploy_and_check(owner, features) {
 			let access_control;
@@ -82,7 +94,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 			deploy_and_check(a1, random_bn256());
 		});
 	});
-	describe("when deployed with not initial features", function() {
+	describe("when deployed with no initial features", function() {
 		let access_control;
 		beforeEach(async function() {
 			access_control = await deployment_fn.call(this, a0);
@@ -93,7 +105,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 				beforeEach(async function() {
 					await access_control.updateRole(by, ROLE_ACCESS_MANAGER, {from: a0});
 				});
-				describe("when ACCESS_MANAGER has full set of permissions", function() {
+				describe("when ACCESS_MANAGER has the full set of permissions", function() {
 					beforeEach(async function() {
 						await access_control.updateRole(by, MAX_UINT256, {from: a0});
 					});
@@ -272,6 +284,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 					it("operator becomes an ACCESS_MANAGER", async function() {
 						expect(await access_control.isOperatorInRole(to, ROLE_ACCESS_MANAGER), "operator").to.be.true;
 						expect(await access_control.isSenderInRole(ROLE_ACCESS_MANAGER, {from: to}), "sender").to.be.true;
+						await access_control.requireSenderInRole(ROLE_ACCESS_MANAGER, {from: to});
 					});
 				});
 				describe("when ACCESS_MANAGER revokes ACCESS_MANAGER permission from itself", function() {
@@ -281,15 +294,16 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 					it("operator ceases to be an ACCESS_MANAGER", async function() {
 						expect(await access_control.isOperatorInRole(by, ROLE_ACCESS_MANAGER), "operator").to.be.false;
 						expect(await access_control.isSenderInRole(ROLE_ACCESS_MANAGER, {from: by}), "sender").to.be.false;
+						await expectRevert(access_control.requireSenderInRole(ROLE_ACCESS_MANAGER, {from: to}), "AccessDenied()");
 					});
 				});
 			});
 			describe("otherwise (no ACCESS_MANAGER permission)", function() {
 				it("updateFeatures reverts", async function() {
-					await expectRevert(access_control.updateFeatures(1, {from: by}), "access denied");
+					await expectRevert(access_control.updateFeatures(1, {from: by}), "AccessDenied()");
 				});
 				it("updateRole reverts", async function() {
-					await expectRevert(access_control.updateRole(to, 1, {from: by}), "access denied");
+					await expectRevert(access_control.updateRole(to, 1, {from: by}), "AccessDenied()");
 				});
 			});
 		}
