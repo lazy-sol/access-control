@@ -65,7 +65,7 @@ features and roles. Usually, smart contracts use different values for all the fe
 next section).
 
 Access manager may revoke its own permissions, including the bit 255. Eventually that allows an access manager to let
-the smart contract “float freely” and be controlled only by the community (via DAO) or by no one at all.
+the smart contract “float freely” and be controlled only by the community (via the DAO) or by no one at all.
 
 ## Comparing with OpenZeppelin
 
@@ -73,7 +73,7 @@ Both our and OpenZeppelin Access Control implementations feature a similar API t
 thing".
 
 Zeppelin implementation is more flexible:
-* it allows setting unlimited number of roles, while current is limited to 256 different roles
+* it allows setting an unlimited number of roles, while current is limited to 256 different roles
 * it allows setting an admin for each role, while current allows having only one global admin
 
 Our implementation is more lightweight:
@@ -93,11 +93,11 @@ npm i -D @lazy-sol/access-control
 Restricted function is a function with a `public` Solidity modifier access to which is restricted
 so that only a pre-configured set of accounts can execute it.
 
-1. Enable role-based access control (RBAC) in a new smart contract
-   by inheriting the RBAC contract from the [AccessControl](./contracts/AccessControl.sol) contract:
+1.  Enable role-based access control (RBAC) in a new smart contract
+    by inheriting the RBAC contract from the [AccessControlCore](./contracts/AccessControlCore.sol) contract:
     ```solidity
     import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-    import "@lazy-sol/access-control/contracts/AccessControl.sol";
+    import "@lazy-sol/access-control/contracts/AccessControlCore.sol";
     
     /**
      * @title Simple ERC20 Implementation
@@ -106,29 +106,29 @@ so that only a pre-configured set of accounts can execute it.
      *
      * @author Lazy So[u]l
      */
-    contract MyERC20Token is ERC20, AccessControl {
+    contract MyERC20Token is ERC20, AccessControlCore {
         
         ...
         
     }
     ```
 
-2. Define an access control role with the unique integer value:
+2.  Define an access control role with the unique integer value:
     ```solidity
         ...
         
         /**
          * @notice Token creator is responsible for creating (minting)
-         tokens to an arbitrary address
+         *      tokens to an arbitrary address
          * @dev Role ROLE_TOKEN_CREATOR allows minting tokens
-         (calling `mint` function)
+         *      (calling `mint` function)
          */
         uint32 public constant ROLE_TOKEN_CREATOR = 0x0001_0000;
         
         ...
     ```
 
-3. Add the `require(isSenderInRole(ROLE_TOKEN_CREATOR), "access denied")"` check into the function body:
+3.  Add the `_requireSenderInRole(ROLE_TOKEN_CREATOR)` check into the function body:
     ```solidity
         ...
         
@@ -137,7 +137,7 @@ so that only a pre-configured set of accounts can execute it.
          */
         function _mint(address _to, uint256 _value) internal virtual override {
             // check if caller has sufficient permissions to mint tokens
-            require(isSenderInRole(ROLE_TOKEN_CREATOR), "access denied");
+            _requireSenderInRole(ROLE_TOKEN_CREATOR);
 
             // delegate to super implementation
             super._mint(_to, _value);
@@ -146,8 +146,8 @@ so that only a pre-configured set of accounts can execute it.
         ...
     ```
 
-   Note: you could also use the `restrictedTo` modifier in the function declaration instead of the `require`
-   in the function body if you don't need a custom error message:
+    Note: it is also possible to use the `restrictedTo` modifier in the function declaration instead of the `require`
+    in the function body if this better suits the coding style:
     ```solidity
         ...
         
@@ -161,6 +161,31 @@ so that only a pre-configured set of accounts can execute it.
         
         ...
     ```
+
+### Customizing the Error Message
+
+Modifier `restrictedTo()`, internal functions `_requireSenderInRole()` and `_requireAccessCondition()` throw the
+`AccessDenied` denied error when access check fails.
+
+It is also possible to use your own custom errors or string messages if needed by leveraging a lower level boolean
+functions `_isSenderInRole()` and `_isOperatorInRole()`:
+
+```solidity
+    ...
+    
+    /**
+     * @inheritdoc ERC20
+     */
+    function _mint(address _to, uint256 _value) internal virtual override {
+        // check if caller has sufficient permissions to mint tokens
+        require(_isSenderInRole(ROLE_TOKEN_CREATOR), "access denied");
+
+        // delegate to super implementation
+        super._mint(_to, _value);
+    }
+    
+    ...
+```
 
 Examples:
 [ERC20Impl](https://raw.githubusercontent.com/vgorin/solidity-template/master/contracts/token/ERC20Impl.sol),
@@ -177,32 +202,32 @@ Many deployed contracts are using this model, and when the time comes to switch 
 
 Prerequisite: deployed OZ Ownable contract (target contract) address (target_address)
 
-1. Deploy the AccessControl Adapter bound to the already deployed OZ Ownable contract
-   (specify the target OZ Ownable contract address in the constructor upon the deployment)
+1.  Deploy the AccessControl Adapter bound to the already deployed OZ Ownable contract
+    (specify the target OZ Ownable contract address in the constructor upon the deployment)
     ```javascript
     const adapter = await (artifacts.require("OwnableToAccessControlAdapter")).new(target_address);
     ```
 
-2. Define what Ownable-restricted public functions on the target contract you'd like to be able
-   to provide access to through the adapter contract
+2.  Define what Ownable-restricted public functions on the target contract you'd like to be able
+    to provide access to through the adapter contract
 
-3. Map every such function with the role required to execute it using `updateAccessRole()` function  
-   For example, to be able to provide an access to the transferOwnership(address) function, you could do
+3.  Map every such function with the role required to execute it using `updateAccessRole()` function  
+    For example, to be able to provide an access to the transferOwnership(address) function, you could do
     ```javascript
     const ROLE_TRANSFER_OWNERSHIP_MANAGER = 0x00010000;
     await adapter.updateAccessRole("transferOwnership(address)", ROLE_TRANSFER_OWNERSHIP_MANAGER);
-   ```
+    ```
 
-4. Provide the roles to the corresponding operators as you would usually do with AccessControl  
-   For example, if you wish an address 0x00000000000000000000000000000000000Ff1CE to grant an access to the
-   transferOwnership(address) function on the target, you could do
+4.  Provide the roles to the corresponding operators as you would usually do with AccessControl  
+    For example, if you wish an address 0x00000000000000000000000000000000000Ff1CE to grant an access to the
+    transferOwnership(address) function on the target, you could do
     ```javascript
     const operator = "0x00000000000000000000000000000000000Ff1CE";
     await adapter.updateRole(operator, ROLE_TRANSFER_OWNERSHIP_MANAGER);
     ```
 
-5. Transfer the ownership of the target contract to the deployed AccessControl Adapter contract  
-   Note that you can also do steps 2-4 after the step 5
+5.  Transfer the ownership of the target contract to the deployed AccessControl Adapter contract  
+    Note that you can also do steps 2-4 after the step 5
 
 #### Usage Flow
 
@@ -210,16 +235,16 @@ Prerequisite: installed AccessControl Adapter with the access to at least one re
 function configured
 
 To execute the restricted access function on the target contract via the AccessControl Adapter
-1. Use target contract ABI to construct a low-level function call calldata  
-   For example, to construct the transferOwnership() function calldata to transfer the ownership to the
-   0x00000000000000000000000000000000DEAdc0De address, you could do
+1.  Use target contract ABI to construct a low-level function call calldata  
+    For example, to construct the transferOwnership() function calldata to transfer the ownership to the
+    0x00000000000000000000000000000000DEAdc0De address, you could do
     ```javascript
     const to = "0x00000000000000000000000000000000DEAdc0De";
     const calldata = target.contract.methods.transferOwnership(to).encodeABI();
     ```
 
-2. Execute a low-level function call on the AccessControl Adapter contract using the constructed calldata  
-   For example, to execute the transferOwnership() function (prepared in step 1), you could do
+2.  Execute a low-level function call on the AccessControl Adapter contract using the constructed calldata  
+    For example, to execute the transferOwnership() function (prepared in step 1), you could do
     ```javascript
       await web3.eth.sendTransaction({
           from: operator,
@@ -228,9 +253,20 @@ To execute the restricted access function on the target contract via the AccessC
       }
     ```
 
-3. It is also ok to add an ether to the transaction by adding a value field to the `sendTransaction` call,
-   as well as sending plain ether transfer transaction, as long as target contract has payable functions,
-   and/or has a default payable receiver
+3.  It is also ok to add an ether to the transaction by adding a value field to the `sendTransaction` call,
+    as well as sending plain ether transfer transaction, as long as target contract has payable functions,
+    and/or has a default payable receiver
+
+## Evaluating Currently Enabled Features and Roles on the Deployed Contract
+
+1.  To evaluate currently enabled features use
+    * `features()` function, or
+    * `getRole(this)` function, replacing `this` with the deployed contract address
+2.  To evaluate currently enabled permissions for a **particular** address use
+    * `getRole(address)` function
+3.  To find **all** the addresses having any permissions, track the `RoleUpdated()` event and evaluate the history
+    of `assiged` roles for every `operator` address
+    * Alternatively, use the [tool](ui.html) which automates the process
 
 ## Contributing
 Please see the [Contribution Guide](./CONTRIBUTING.md) document to get understanding on how to report issues,

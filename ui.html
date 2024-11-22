@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Role-based Access Control (RBAC) Inspector</title>
+	<!-- Include Web3.js from a CDN -->
+	<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+	<style>
+		table#roles_list {
+			width: 100%;
+			border-collapse: collapse;
+		}
+		table#roles_list th, table#roles_list td {
+			border: 1px solid grey;
+		}
+		table#roles_list tr td {
+			font-family: monospace;
+		}
+	</style>
+</head>
+<body>
+<fieldset id="root_container" style="display: none;"><legend id="connection_state" style="text-align: right;"></legend>
+<div id="main_app" style="display: none;">
+	<fieldset><legend>Role-based Access Control (RBAC) Features and Roles Inspector</legend>
+		<form onsubmit="inspect_features_roles(event)">
+			<table>
+				<tr>
+					<td><label for="contract_address">Contract Address:</label></td>
+					<td><input id="contract_address" type="text" required size="42" style="font-family: monospace;" value="0xA9f50518f9119d5F7A324EC76481c5246970dEa6"/></td>
+				</tr>
+				<tr><td></td><td><input type="submit" value="Inspect"/></td></tr>
+			</table>
+		</form>
+	</fieldset>
+	<div id="features_roles_container" style="display: none;">
+		<fieldset>
+			<legend id="features_title">RBAC Features</legend>
+			<div id="features_hex">Loading...</div>
+		</fieldset>
+		<fieldset>
+			<legend id="roles_list_title">RBAC Operators and Roles</legend>
+			<table id="roles_list"><tr><td>Loading...</td></tr></table>
+		</fieldset>
+	</div>
+</div>
+</fieldset>
+<div style="position: fixed; left: 0; bottom: 0; margin: 0.1em 0.2em;">&copy; 2024 <a href="https://github.com/lazy-sol/">Lazy So[u]l</a></div>
+<div style="position: fixed; right: 0; bottom: 0; margin: 0.1em 0.2em; font-family: monospace;">
+	[<a href="https://lazy-sol.github.io/advanced-erc20/ui.html">Advanced ERC20</a>]
+	[<a href="https://lazy-sol.github.io/tiny-erc721/ui.html">Tiny ERC721</a>]
+	[RBAC Inspector]
+</div>
+</body>
+<script type="text/javascript">
+// verify if MetaMask is installed
+if(!window.ethereum) {
+	if(window.confirm("MetaMask is not installed. You will be redirected to the MetaMask installation page.")) {
+		window.setTimeout(function() {
+			window.location.href = "https://metamask.io/download/";
+		}, 0);
+	}
+	window.stop();
+}
+</script>
+
+<script type="text/javascript">
+// static HTML page anchors
+const root_container = document.getElementById("root_container");
+const connection_state = document.getElementById("connection_state");
+const main_app = document.getElementById("main_app");
+const contract_address = document.getElementById("contract_address");
+const features_roles_container = document.getElementById("features_roles_container");
+const features_title = document.getElementById("features_title");
+const features_hex = document.getElementById("features_hex");
+const roles_list_title = document.getElementById("roles_list_title");
+const roles_list = document.getElementById("roles_list");
+</script>
+
+<script type="text/javascript">
+// auxiliary pure functions
+
+// auxiliary function to log and display non-fatal error, doesn't stop execution
+function non_fatal_error(message, error) {
+	console.error("%s: %o", message, error);
+	window.alert(message + (error? ": " + json_stringify(error): ""));
+}
+
+// auxiliary function to log and display fatal error and stop execution
+function fatal_error(message, error) {
+	non_fatal_error("FATAL: " + message, error);
+	window.stop();
+	throw error? error: "error";
+}
+
+// save JSON.stringify works properly with BigInt
+function json_stringify(input) {
+	return JSON.stringify(input, (key, value) =>
+		typeof value === 'bigint' ? value.toString() : value
+	);
+}
+</script>
+
+<script type="text/javascript">
+// config and app state
+
+// config stores settings which don't change
+const CONF = {
+	// supported networks, where our contracts are known to be deployed
+	chains: {
+		1: {
+			name: "Mainnet",
+			block_explorer: {
+				tx: "https://etherscan.io/tx/",
+				address: "https://etherscan.io/address/",
+				token: "https://etherscan.io/token/",
+			},
+		},
+		11155111: {
+			name: "Sepolia",
+			block_explorer: {
+				tx: "https://sepolia.etherscan.io/tx/",
+				address: "https://sepolia.etherscan.io/address/",
+				token: "https://sepolia.etherscan.io/token/",
+			},
+		},
+		8453: {
+			name: "Base",
+			block_explorer: {
+				tx: "https://basescan.org/tx/",
+				address: "https://basescan.org/address/",
+				token: "https://basescan.org/token/",
+			},
+		},
+		84532: {
+			name: "Base Sepolia",
+			block_explorer: {
+				tx: "https://sepolia.basescan.org//tx/",
+				address: "https://sepolia.basescan.org/address/",
+				token: "https://sepolia.basescan.org/token/",
+			},
+		},
+	},
+};
+
+// state stores settings which may change due to user actions,
+// due to the async nature of the app, many incoming events, it makes sense to follow
+// the state of the app by listening to all the events and updating the state
+const STATE = {
+	// currently connected network (recognized decimal Chain ID)
+	chain_id: undefined,
+	// currently connected account (accounts[0])
+	A0: undefined,
+	// currently connected chain config
+	chain: function() {
+		return this.chain_id? CONF.chains[this.chain_id]: undefined;
+	},
+	// function to display the chain we're connected to
+	update_chain_id: function(chain_id) {
+		this.chain_id = chain_id? parseInt(chain_id): undefined;
+	},
+	// function to update currently connected account
+	update_A0: function(accounts) {
+		// MetaMask is locked or not connected
+		if(!accounts || !accounts.length) {
+			this.A0 = undefined;
+		}
+		else {
+			[this.A0] = accounts;
+		}
+	},
+	// function to refresh the connection state UI
+	refresh_ui: function() {
+		if(CONF.chains[this.chain_id]) {
+			if(this.A0) {
+				connection_state.innerHTML = `Connected <span style="font-family: monospace;">${this.A0}</span>`;
+			}
+			else {
+				connection_state.innerHTML = `
+					MetaMask is not connected.
+					<input type="button" onclick="metamask_connect()" value="Connect"/>
+				`;
+			}
+		}
+		else if(this.chain_id) {
+			connection_state.innerHTML = `
+				Unsupported Chain ID: ${this.chain_id}
+				<input type="button" onclick="add_sepolia_network()" value="Switch to Sepolia"/>
+			`;
+		}
+		else {
+			connection_state.innerHTML = `
+				MetaMask disconnected.
+				<input type="button" onclick="metamask_connect()" value="Connect"/>
+			`;
+		}
+		root_container.style["display"] = "block";
+	},
+	// function to check if we're connected to supported network
+	connected: function() {
+		return this.chain() && this.A0;
+	},
+}
+</script>
+
+<script type="text/javascript">
+// main app section
+
+// define window.ethereum shortcut
+const ethereum = window.ethereum;
+// MetaMask is installed, create a new Web3 instance
+const web3 = new Web3(window.ethereum);
+
+// function to connect to MetaMask
+function metamask_connect() {
+	ethereum.request({ method: 'eth_requestAccounts' }).then(function(accounts) {
+		STATE.update_A0(accounts);
+		STATE.refresh_ui();
+		reload_main_app();
+	}).catch(function(e) {
+		non_fatal_error("Error connecting MetaMask", e);
+	});
+}
+
+// check if MetaMask is connected
+ethereum.request({ method: 'eth_accounts' }).then(function(accounts) {
+	// check current connected network
+	ethereum.request({ method: 'eth_chainId' }).then(function(chain_id) {
+		STATE.update_chain_id(chain_id);
+		STATE.update_A0(accounts);
+		STATE.refresh_ui();
+		reload_main_app();
+	}).catch(function(e) {
+		fatal_error("Error getting Chain ID", e);
+	});
+}).catch(function(e) {
+	fatal_error("Error connecting to MetaMask", e);
+});
+
+// Handle the case when MetaMask connects another account
+ethereum.on('accountsChanged', function(accounts) {
+	console.log("account has been switched", accounts)
+	STATE.update_A0(accounts);
+	STATE.refresh_ui();
+	reload_main_app();
+});
+
+// Handle the case when MetaMask is connected
+ethereum.on('connect', function(connect_info) {
+	console.log('MetaMask has been connected', connect_info);
+	STATE.update_chain_id(connect_info.chainId);
+	STATE.refresh_ui();
+	reload_main_app();
+});
+
+// MetaMask disconnect listener
+ethereum.on('disconnect', function(error) {
+	console.warn('MetaMask has been disconnected', error);
+	STATE.update_A0();
+	STATE.update_chain_id();
+	STATE.refresh_ui();
+	reload_main_app();
+});
+
+// network switch listener
+ethereum.on('chainChanged', function(chain_id) {
+	console.log('network has been changed', chain_id)
+	STATE.update_chain_id(chain_id);
+	STATE.refresh_ui();
+	reload_main_app();
+});
+
+// define an async routine to switch the network to Sepolia
+async function add_sepolia_network() {
+	const sepolia_chain_id = '0xaa36a7'; // Hexadecimal chain ID for Sepolia
+
+	try {
+		// Check if Sepolia is already added
+		await ethereum.request({
+			method: 'wallet_switchEthereumChain',
+			params: [{ chainId: sepolia_chain_id }],
+		});
+	}
+	catch(e) {
+		// Error code 4902 indicates that the chain has not been added to MetaMask
+		if(e.code !== 4902) {
+			// Handle errors when switching the network
+			fatal_error("Error switching network to Sepolia", e)
+		}
+
+		try {
+			// Add the Sepolia network
+			await ethereum.request({
+				method: 'wallet_addEthereumChain',
+				params: [{
+					chainId: sepolia_chain_id,
+					rpcUrl: 'https://sepolia.infura.io/v3/',
+					chainName: 'Sepolia Test Network',
+					nativeCurrency: {
+						name: 'SepoliaETH',
+						symbol: 'SepoliaETH',
+						decimals: 18,
+					},
+					blockExplorerUrls: ['https://sepolia.etherscan.io/'],
+				}],
+			});
+		}
+		catch (e) {
+			// Handle errors when adding the network
+			fatal_error("Error adding Sepolia network", e);
+		}
+	}
+}
+
+// writes the entire roles_list table
+function features_roles_update({features, roles, assignments}) {
+	if(!Array.isArray(roles)) {
+		roles = Object.entries(roles).map(([operator, role]) => Object.assign({}, {operator, role}));
+	}
+
+	if(assignments && assignments.length) {
+		features_hex.innerHTML = features?
+			`Features enabled: <span style="font-family: monospace">0x${features.toString(16).toUpperCase()}</span>`:
+			"No features enabled.";
+
+		if(roles && roles.length) {
+			const table_body = roles.map(render_role_row).join("\n");
+			roles_list.innerHTML = `<tr><th>Operator Address</th><th>Assigned Role</th></tr>\n${table_body}`;
+		}
+		else {
+			roles_list.innerHTML = "No roles assigned.";
+		}
+	}
+	else {
+		features_hex.innerHTML = "No features enabled or not an RBAC contract.";
+		roles_list.innerHTML = "No roles assigned or not an RBAC contract.";
+	}
+	features_roles_container.style["display"] = "block";
+}
+
+// renders an HTML of the role list table row
+function render_role_row({operator, role}) {
+	return `<tr><td>${operator}</td><td>0x${role.toString(16).toUpperCase()}</td></tr>`;
+}
+
+// reloads the entire app, used when network or accounts have been changed
+function reload_main_app() {
+	if(!STATE.connected()) {
+		main_app.style["display"] = "none";
+		return;
+	}
+
+	features_roles_container.style.display = "none";
+	features_title.innerHTML = "RBAC Features";
+	features_hex.innerHTML = "Loading features...";
+	roles_list_title.innerHTML = "RBAC Operators and Roles";
+	roles_list.innerHTML = "Loading operators and roles...";
+
+	main_app.style["display"] = "block";
+}
+
+// function to extract RBAC roles from the target contract
+async function extract_rbac_features_roles(target_address) {
+	// the earliest versions of the AccessControl emitted both FeaturesUpdated and RoleUpdated;
+	// the features were assigned to a zero address
+	// TODO: the earliest versions didn't emit an event on deployment
+	// later versions of the AccessControl emitted only RoleUpdated event;
+	// the features were assigned to a zero address, and later to the contract address (self-role)
+	// the most recent versions of the AccessControl emit only RoleUpdated event;
+	// the features are assigned to the contract address, argument naming is improved and made clearer
+	const v0_abi = [{
+		// the earliest versions only
+		"name": "FeaturesUpdated",
+		"type": "event",
+		"anonymous": false,
+		"inputs": [
+			{"indexed": true, "internalType": "address", "name": "_by", "type": "address"},
+			{"indexed": false, "internalType": "uint256", "name": "_requested", "type": "uint256"},
+			{"indexed": false, "internalType": "uint256", "name": "_actual", "type": "uint256"}
+		],
+	}, {
+		// both the earliest and later versions
+		"name": "RoleUpdated",
+		"type": "event",
+		"anonymous": false,
+		"inputs": [
+			{"indexed": true, "internalType": "address", "name": "_by", "type": "address"},
+			{"indexed": true, "internalType": "address", "name": "_to", "type": "address"},
+			{"indexed": false, "internalType": "uint256", "name": "_requested", "type": "uint256"},
+			{"indexed": false, "internalType": "uint256", "name": "_actual", "type": "uint256"}
+		],
+	}, {
+		// both the earliest and later versions
+		"name": "userRoles",
+		"type": "function",
+		"inputs": [{"internalType": "address", "name": "", "type": "address"}],
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+	}];
+	const v1_abi = [{
+		// the latest versions only
+		"name": "RoleUpdated",
+		"type": "event",
+		"anonymous": false,
+		"inputs": [
+			{"indexed": true, "internalType": "address", "name": "operator", "type": "address"},
+			{"indexed": false, "internalType": "uint256", "name": "requested", "type": "uint256"},
+			{"indexed": false, "internalType": "uint256", "name": "assigned", "type": "uint256"}
+		],
+	}, {
+		// the latest versions only
+		"name": "getRole",
+		"type": "function",
+		"inputs": [{"internalType": "address", "name": "operator", "type": "address"}],
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+	}];
+
+	const v0_contract = new web3.eth.Contract(v0_abi, target_address);
+	const v1_contract = new web3.eth.Contract(v1_abi, target_address);
+
+	const features_v0 = await v0_contract.getPastEvents("FeaturesUpdated", {
+		fromBlock: "earliest",
+	});
+	console.log("v0.getPastEvents(FeaturesUpdated)", features_v0);
+	const role_v0 = await v0_contract.getPastEvents("RoleUpdated", {
+		fromBlock: "earliest",
+	});
+	console.log("v0.getPastEvents(RoleUpdated)", role_v0);
+	const role_v1 = await v1_contract.getPastEvents("RoleUpdated", {
+		fromBlock: "earliest",
+	});
+	console.log("v1.getPastEvents(RoleUpdated)", role_v1);
+	const assignments = features_v0.map(function(event) {
+		const {_actual: assigned} = event.returnValues;
+		// fix to the most recent format: feature is self-role
+		return {operator: target_address, assigned};
+	}).concat(role_v0.map(function(event) {
+		let {_to: operator, _actual: assigned} = event.returnValues;
+		if(operator === "0x0000000000000000000000000000000000000000") {
+			// fix to the most recent format: feature is self-role
+			operator = target_address;
+		}
+		return {operator, assigned};
+	})).concat(role_v1.map(function(event) {
+		const {operator, assigned} = event.returnValues;
+		return {operator, assigned};
+	}));
+
+	let features = 0;
+	v0_contract.methods["userRoles"]();
+
+	const roles = {};
+	assignments.forEach(function({operator, assigned}) {
+		if(operator === target_address) {
+			features = assigned;
+		}
+		else if(!BigInt(assigned)) {
+			delete roles[operator];
+		}
+		else {
+			roles[operator] = assigned;
+		}
+	});
+	console.log("extracted RBAC features and roles", features, roles);
+	
+	return {features, roles, assignments};
+}
+
+// loads and parses features and roles on the RBAC contract,
+// always returns false since is used as a form submit listener
+function inspect_features_roles(e) {
+	if(e && e.preventDefault) {
+		e.preventDefault();
+	}
+
+	if(!contract_address.value) {
+		alert("Contract Address is required");
+		return false;
+	}
+	if(!STATE.connected()) {
+		alert("Not connected to the network. Please reload the page if the problem persists.")
+		return false;
+	}
+
+	web3.eth.getCode(contract_address.value).then(function(code) {
+		if(code.length < 4) {
+			alert("no code at " + contract_address.value);
+		}
+	}).catch(function(e) {
+		non_fatal_error("can't load contract at " + contract_address.value, e);
+	});
+
+	extract_rbac_features_roles(contract_address.value).then(features_roles_update).catch(function(e) {
+		console.warn("failed to load RBAC features and roles list", e);
+		features_hex.innerHTML = "Failed to load RBAC features: " + e;
+		roles_list.innerHTML = "Failed to load RBAC roles list: " + e;
+		features_roles_container.style["display"] = "block";
+	}).finally(function() {
+		features_title.innerHTML = "RBAC Features for " + contract_address.value;
+		roles_list_title.innerHTML = "RBAC Operators and Roles for " + contract_address.value;
+	});
+
+	return false;
+}
+</script>
+</html>

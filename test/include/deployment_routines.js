@@ -3,23 +3,14 @@
  * (doesn't return any value on successful operation)
  *
  * @param a0 smart contract owner
- * @param H0 initial token holder address
  * @returns USDT ERC20 instance
  */
-async function deploy_usdt(a0, H0 = a0) {
+async function deploy_usdt(a0) {
 	// smart contracts required
 	const USDTContract = artifacts.require("TetherToken");
 
-	// deploy the token
-	const token = await USDTContract.new(0, "Tether USD", "USDT", 6, {from: a0});
-
-	// move the initial supply if required
-	if(H0 !== a0) {
-		await token.transfer(H0, S0, {from: a0});
-	}
-
-	// return the reference
-	return token;
+	// deploy the token and return the reference
+	return await USDTContract.new(0, "Tether USD", "USDT", 6, {from: a0});
 }
 
 /**

@@ -1,3 +1,8 @@
+v1.1.1: Role-based Access Control (RBAC) Inspector
+- Introduced the Role-based Access Control (RBAC) Inspector UI capable of evaluating features and roles
+  for already deployed contracts; supports all EVM-based networks (mainnet, sepolia, etc.)
+- Optimized npm imports moving all prod dependencies into dev dependencies
+
 v1.1.0: Contact Size Optimizations
 
 - __Breaking Change:__ Solidity 0.8.4 is now required to compile the contracts
