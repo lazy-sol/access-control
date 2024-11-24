@@ -1,3 +1,5 @@
+v1.1.2: do not enable full privileges to zero address on construction
+
 v1.1.1: Role-based Access Control (RBAC) Inspector
 - Introduced the Role-based Access Control (RBAC) Inspector UI capable of evaluating features and roles
   for already deployed contracts; supports all EVM-based networks (mainnet, sepolia, etc.)

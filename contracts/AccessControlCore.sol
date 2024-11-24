@@ -135,8 +135,11 @@ abstract contract AccessControlCore {
 	 * @param _features initial features mask of the contract, can be zero
 	 */
 	constructor(address _owner, uint256 _features) { // visibility modifier is required to be compilable with 0.6.x
-		// grant owner full privileges
-		__setRole(_owner, FULL_PRIVILEGES_MASK, FULL_PRIVILEGES_MASK);
+		// if there is a request to set owner (zero address owner means no owner)
+		if(_owner != address(0)) {
+			// grant owner full privileges
+			__setRole(_owner, FULL_PRIVILEGES_MASK, FULL_PRIVILEGES_MASK);
+		}
 		// update initial features bitmask
 		__setRole(address(this), _features, _features);
 	}

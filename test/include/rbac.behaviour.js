@@ -59,13 +59,15 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 			beforeEach(async function() {
 				access_control = await deployment_fn.call(this, a0, owner, features);
 			});
-			it('"RoleUpdated(owner)" event is emitted correctly', async function() {
-				await expectEvent.inConstruction(access_control, "RoleUpdated", {
-					operator: owner,
-					requested: FULL_PRIVILEGES_MASK,
-					assigned: FULL_PRIVILEGES_MASK,
+			if(owner !== ZERO_ADDRESS) {
+				it('"RoleUpdated(owner)" event is emitted correctly', async function() {
+					await expectEvent.inConstruction(access_control, "RoleUpdated", {
+						operator: owner,
+						requested: FULL_PRIVILEGES_MASK,
+						assigned: FULL_PRIVILEGES_MASK,
+					});
 				});
-			});
+			}
 			it('"RoleUpdated(this)" event is emitted correctly', async function() {
 				await expectEvent.inConstruction(access_control, "RoleUpdated", {
 					operator: access_control.address,
@@ -73,9 +75,16 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 					assigned: features,
 				});
 			});
-			it("owners' role is set correctly", async function() {
-				expect(await access_control.getRole(owner)).to.be.bignumber.that.equals(FULL_PRIVILEGES_MASK);
-			});
+			if(owner !== ZERO_ADDRESS) {
+				it("owners' role is set correctly", async function() {
+					expect(await access_control.getRole(owner)).to.be.bignumber.that.equals(FULL_PRIVILEGES_MASK);
+				});
+			}
+			else {
+				it("owners' role is not set", async function() {
+					expect(await access_control.getRole(owner)).to.be.bignumber.that.equals("0");
+				});
+			}
 			it("features are set correctly", async function() {
 				expect(await access_control.features()).to.be.bignumber.that.equals(features);
 			});
