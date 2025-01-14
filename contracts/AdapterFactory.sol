@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4;
+pragma solidity >=0.8.20;
 
 import "./OwnableToAccessControlAdapter.sol";
 
@@ -39,7 +39,10 @@ contract AdapterFactory {
 	 * @param targetAddress OZ Ownable target address to bind OwnableToAccessControlAdapter to
 	 * @return address of the newly deployed OwnableToAccessControlAdapter contract
 	 */
-	function deployNewOwnableToAccessControlAdapter(address targetAddress) public returns(address) {
+	function deployNewOwnableToAccessControlAdapter(address targetAddress) external returns(address) {
+		// verify the inputs
+		require(targetAddress != address(0), "zero address");
+		require(targetAddress.code.length != 0, "EOA");
 		// verify sender is a target owner
 		require(Ownable(targetAddress).owner() == msg.sender, "not an owner");
 

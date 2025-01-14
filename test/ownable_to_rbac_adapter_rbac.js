@@ -46,12 +46,14 @@ contract("OwnableToAccessControlAdapter: RBAC tests", function(accounts) {
 		it("it is impossible to configure the access role from an unauthorized account", async function() {
 			const operator = a1;
 			await adapter.updateRole(operator, not(ROLE_ACCESS_ROLES_MANAGER), {from: a0});
-			await expectRevert(adapter.updateAccessRole("1", 1, {from: operator}), "AccessDenied()");
+			await expectRevert(adapter.methods["updateAccessRole(string,uint256)"]("1", 1, {from: operator}), "AccessDenied()");
+			await expectRevert(adapter.methods["updateAccessRole(bytes4,uint256)"]("0x12345678", 1, {from: operator}), "AccessDenied()");
 		});
 		it("it is possible to configure the access role from the authorized account", async function() {
 			const operator = a1;
 			await adapter.updateRole(operator, ROLE_ACCESS_ROLES_MANAGER, {from: a0});
-			adapter.updateAccessRole("1", 1, {from: operator});
+			adapter.methods["updateAccessRole(string,uint256)"]("1", 1, {from: operator});
+			adapter.methods["updateAccessRole(bytes4,uint256)"]("0x12345678", 1, {from: operator});
 		});
 	});
 });

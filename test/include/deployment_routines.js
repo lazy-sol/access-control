@@ -89,6 +89,7 @@ async function deploy_adapter_factory(a0) {
 /**
  * Deploys OwnableToAccessControlAdapter via the AdapterFactory
  * Deploys the AdapterFactory and target Ownable if required
+ * Transfers ownership from the target to the adapter
  *
  * @param a0 deployer address, target owner, required
  * @param factory AdapterFactory instance or address, optional
@@ -113,21 +114,34 @@ async function factory_deploy_ownable_to_ac_adapter(a0, factory, target) {
 	}
 
 	// deploy the adapter via the AdapterFactory
-	const receipt = await factory.deployNewOwnableToAccessControlAdapter(target.address, {from: a0});
-	const {
-		adapterAddress,
-		ownableTargetAddress,
-	} = receipt.logs.find(log => log.event === "NewOwnableToAccessControlAdapterDeployed").args;
-
-	// connect to the adapter
-	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
-	const adapter = await OwnableToAccessControlAdapter.at(adapterAddress);
+	const adapter = await factory_deploy_ownable_to_ac_adapter_pure(a0, factory, target);
 
 	// transfer ownership to the adapter
 	await target.transferOwnership(adapter.address, {from: a0});
 
 	// return the results
 	return {factory, target, adapter};
+}
+
+/**
+ * Deploys OwnableToAccessControlAdapter via the AdapterFactory
+ *
+ * @param a0 deployer address, target owner, required
+ * @param factory AdapterFactory instance, required
+ * @param target Ownable instance or address, required
+ * @returns OwnableToAccessControlAdapter instance
+ */
+async function factory_deploy_ownable_to_ac_adapter_pure(a0, factory, target) {
+	// deploy the adapter via the AdapterFactory
+	const receipt = await factory.deployNewOwnableToAccessControlAdapter(target.address || target, {from: a0});
+	const {
+		adapterAddress,
+		ownableTargetAddress,
+	} = receipt.logs.find(log => log.event === "NewOwnableToAccessControlAdapterDeployed").args;
+
+	// connect to the adapter and return the result
+	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
+	return await OwnableToAccessControlAdapter.at(adapterAddress);
 }
 
 // export public deployment API
@@ -138,4 +152,5 @@ module.exports = {
 	deploy_ownable_to_ac_adapter,
 	deploy_adapter_factory,
 	factory_deploy_ownable_to_ac_adapter,
+	factory_deploy_ownable_to_ac_adapter_pure,
 }

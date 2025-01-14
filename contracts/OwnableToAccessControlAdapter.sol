@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // breaking changes in .call() (0.5.0)
 // allow .call{}() (0.6.2)
-pragma solidity >=0.8.4;
+pragma solidity >=0.8.20;
 
 import "./AccessControl.sol";
 
@@ -71,7 +71,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 *
 	 * @dev Target contract must transfer its ownership to the AccessControl Adapter
 	 */
-	address public target;
+	address public immutable target;
 
 	/**
 	 * @dev Access roles mapping stores the roles required to access the functions on the
@@ -116,6 +116,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	constructor(address _target, address _owner) AccessControlCore(_owner, 0) { // visibility modifier is required to be compilable with 0.6.x
 		// verify the inputs
 		require(_target != address(0), "zero address");
+		require(_target.code.length != 0, "EOA");
 
 		// initialize internal contract state
 		target = _target;
@@ -132,9 +133,9 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param role role required to execute this function, or zero to disable
 	 *      access to the specified function for everyone
 	 */
-	function updateAccessRole(string memory signature, uint256 role) public {
-		// delegate to `updateAccessRole(bytes4, uint256)`
-		updateAccessRole(bytes4(keccak256(bytes(signature))), role);
+	function updateAccessRole(string memory signature, uint256 role) external {
+		// delegate to internal `_updateAccessRole(bytes4, uint256)`
+		__updateAccessRole(bytes4(keccak256(bytes(signature))), role);
 	}
 
 	/**
@@ -148,7 +149,23 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param role role required to execute this function, or zero to disable
 	 *      access to the specified function for everyone
 	 */
-	function updateAccessRole(bytes4 selector, uint256 role) public {
+	function updateAccessRole(bytes4 selector, uint256 role) external {
+		// delegate to internal `_updateAccessRole(bytes4, uint256)`
+		__updateAccessRole(selector, role);
+	}
+
+	/**
+	 * @dev Updates the access role required to execute the function defined by its selector
+	 *      on the target contract
+	 *
+	 * @dev More on function signatures and selectors: https://docs.soliditylang.org/en/develop/abi-spec.html
+	 *
+	 * @param selector function selector on the target contract, for example
+	 *      0xf2fde38b selector corresponds to the "transferOwnership(address)" function
+	 * @param role role required to execute this function, or zero to disable
+	 *      access to the specified function for everyone
+	 */
+	function __updateAccessRole(bytes4 selector, uint256 role) private {
 		// verify the access permission
 		_requireSenderInRole(ROLE_ACCESS_ROLES_MANAGER);
 

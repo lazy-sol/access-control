@@ -333,7 +333,7 @@ module.exports = {
 		// https://hardhat.org/guides/compile-contracts.html
 		compilers: [
 			{
-				version: "0.8.21",
+				version: "0.8.28",
 				settings: {
 					optimizer: {
 						enabled: true,

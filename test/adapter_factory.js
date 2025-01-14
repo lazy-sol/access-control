@@ -21,7 +21,7 @@ const {
 const {
 	deploy_usdt,
 	deploy_adapter_factory,
-	factory_deploy_ownable_to_ac_adapter,
+	factory_deploy_ownable_to_ac_adapter_pure,
 } = require("./include/deployment_routines");
 
 // run AdapterFactory tests
@@ -39,13 +39,19 @@ contract("AdapterFactory tests", function(accounts) {
 		factory = await deploy_adapter_factory();
 	});
 
+	it("adapter deployment fails if target address is zero address", async function() {
+		await expectRevert(factory_deploy_ownable_to_ac_adapter_pure(a1, factory, ZERO_ADDRESS), "zero address");
+	});
+	it("adapter deployment fails if target address is EOA", async function() {
+		await expectRevert(factory_deploy_ownable_to_ac_adapter_pure(a1, factory, a2), "EOA");
+	});
 	it("adapter deployment fails if executed not by the ownable owner", async function() {
-		await expectRevert(factory_deploy_ownable_to_ac_adapter(a2, factory, usdt), "not an owner");
+		await expectRevert(factory_deploy_ownable_to_ac_adapter_pure(a2, factory, usdt), "not an owner");
 	});
 	describe("adapter deployment succeeds if executed by the ownable owner", async function() {
 		let adapter;
 		beforeEach(async function() {
-			({adapter} = await factory_deploy_ownable_to_ac_adapter(a1, factory, usdt));
+			adapter = await factory_deploy_ownable_to_ac_adapter_pure(a1, factory, usdt);
 		});
 		it("adapter's target is set correctly", async function() {
 			expect(await adapter.target()).to.be.equal(usdt.address);
