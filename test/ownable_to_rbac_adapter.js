@@ -48,7 +48,15 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 			({target, adapter} = await deploy_ownable_to_ac_adapter(a0));
 		});
 
+		it("it is impossible to send ether before empty selector access role is configured", async function() {
+			await expectRevert(web3.eth.sendTransaction({
+				from: a0,
+				to: adapter.address,
+				value: 1_000_000_000, // 1 gwei
+			}), "access role not set");
+		});
 		it("it is impossible to send ether to the non-payable target contract via the adapter", async function() {
+			await adapter.methods["updateAccessRole(bytes4,uint256)"]("0x00000000", 1, {from: a0});
 			await expectRevert(web3.eth.sendTransaction({
 				from: a0,
 				to: adapter.address,
@@ -62,15 +70,16 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 				data: target.contract.methods.transferOwnership(a2).encodeABI(),
 			}), "access role not set");
 		});
-		describe("once transferOwnership function access control is configured", function() {
+		describe("when transferOwnership function access control is configured", function() {
 			const ROLE_OWNERSHIP_MANAGER = 0x00010000;
+			const fn_selector = web3.eth.abi.encodeFunctionSignature("transferOwnership(address)");
 			let receipt;
 			beforeEach(async function() {
 				receipt = await adapter.methods["updateAccessRole(string,uint256)"]("transferOwnership(address)", ROLE_OWNERSHIP_MANAGER, {from: a0});
 			});
 			it('"AccessRoleUpdated" event is emitted', async function() {
 				expectEvent(receipt, "AccessRoleUpdated", {
-					selector: web3.eth.abi.encodeFunctionSignature("transferOwnership(address)"),
+					selector: web3.utils.padRight(fn_selector, 64),
 					role: "" + ROLE_OWNERSHIP_MANAGER,
 				});
 			});
@@ -85,14 +94,6 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 				beforeEach(async function() {
 					await adapter.updateRole(a1, ROLE_OWNERSHIP_MANAGER, {from: a0});
 				});
-				it("execution of the transferOwnership function succeeds", async function() {
-					await web3.eth.sendTransaction({
-						from: a1,
-						to: adapter.address,
-						data: target.contract.methods.transferOwnership(a2).encodeABI(),
-					});
-					expect(await target.owner(), "wrong owner after ownership transfer").to.equal(a2);
-				});
 				it("execution of the transferOwnership non-payable function fails if ether is supplied", async function() {
 					await expectRevert(web3.eth.sendTransaction({
 						from: a1,
@@ -100,6 +101,36 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 						data: target.contract.methods.transferOwnership(a2).encodeABI(),
 						value: 1_000_000_000, // 1 gwei
 					}), "execution failed");
+				});
+				it("execution of the transferOwnership fails if function selector is corrupted", async function() {
+					await expectRevert(web3.eth.sendTransaction({
+						from: a1,
+						to: adapter.address,
+						data: "0x112233",
+						value: 1_000_000_000, // 1 gwei
+					}), "bad selector");
+				});
+				describe("execution of the transferOwnership function succeeds otherwise", function() {
+					let receipt, data;
+					beforeEach(async function() {
+						data = target.contract.methods.transferOwnership(a2).encodeABI();
+						receipt = await web3.eth.sendTransaction({
+							from: a1,
+							to: adapter.address,
+							data: data,
+						});
+					});
+					it('"ExecutionComplete" event is emitted', async function() {
+						await expectEvent.inTransaction(receipt.transactionHash, adapter, "ExecutionComplete", {
+							selector: web3.utils.padRight(fn_selector, 64),
+							roleRequired: ROLE_OWNERSHIP_MANAGER,
+							data: data,
+							result: null,
+						});
+					});
+					it("owner gets transferred correctly", async function() {
+						expect(await target.owner()).to.equal(a2);
+					});
 				});
 			});
 		});
@@ -114,7 +145,7 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 				});
 				it('"AccessRoleUpdated" event is emitted', async function() {
 					expectEvent(receipt, "AccessRoleUpdated", {
-						selector: fn_selector,
+						selector: web3.utils.padRight(fn_selector, 64),
 						role: "" + access_permission,
 					});
 				});
@@ -129,7 +160,7 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 				});
 				it('"AccessRoleUpdated" event is emitted', async function() {
 					expectEvent(receipt, "AccessRoleUpdated", {
-						selector: fn_selector,
+						selector: web3.utils.padRight(fn_selector, 64),
 						role: "" + access_permission,
 					});
 				});

@@ -95,16 +95,17 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param selector selector of the function which corresponding access role was updated
 	 * @param role effective required role to execute the function defined by the selector
 	 */
-	event AccessRoleUpdated(bytes4 selector, uint256 role);
+	event AccessRoleUpdated(bytes4 indexed selector, uint256 role);
 
 	/**
 	 * @dev Logs function execution result on the target if the execution completed successfully
 	 *
 	 * @param selector selector of the function which was executed on the target contract
+	 * @param roleRequired role that was required to execute the function requested
 	 * @param data full calldata payload passed to the target contract (includes the 4-bytes selector)
 	 * @param result execution response from the target contract
 	 */
-	event ExecutionComplete(bytes4 selector, bytes data, bytes result);
+	event ExecutionComplete(bytes4 indexed selector, uint256 roleRequired, bytes data, bytes result);
 
 	/**
 	 * @dev Deploys an AccessControl Adapter binding it to the target OZ Ownable contract,
@@ -192,25 +193,16 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 */
 	function execute(bytes memory data) public payable returns(bytes memory) {
 		// extract the selector (first 4 bytes as bytes4) using assembly
-		bytes4 selector;
-		assembly {
-			// load the first word after the length field
-			selector := mload(add(data, 32))
-		}
+		bytes4 selector = data.length == 0? bytes4(0x00000000): __extractSelector(data);
 
-		// zero data length means we're trying to execute the receive() function on
-		// the target and supply some ether to the target; in this case we don't need a security check
-		// if the data is present, we're executing some real function and must do a security check
-		if(data.length != 0) {
-			// determine the role required to access the function
-			uint256 roleRequired = accessRoles[selector];
+		// determine the role required to access the function
+		uint256 roleRequired = accessRoles[selector];
 
-			// verify function access role was already set
-			require(roleRequired != 0, "access role not set");
+		// verify function access role was already set
+		require(roleRequired != 0, "access role not set");
 
-			// verify the access permission
-			_requireSenderInRole(roleRequired);
-		}
+		// verify the access permission
+		_requireSenderInRole(roleRequired);
 
 		// execute the call on the target
 		(bool success, bytes memory result) = address(target).call{value: msg.value}(data);
@@ -219,7 +211,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 		__requireSuccessfulCall(success, result);
 
 		// emit an event
-		emit ExecutionComplete(selector, data, result);
+		emit ExecutionComplete(selector, roleRequired, data, result);
 
 		// return the result
 		return result;
@@ -246,6 +238,20 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 		// msg.data contains full calldata: function selector + encoded function arguments (if any)
 		// delegate to `execute(bytes)`
 		execute(msg.data);
+	}
+
+	/// @dev Extracts first 4 bytes from the input, throwing if input is less than 4 bytes long
+	function __extractSelector(bytes memory data) private pure returns(bytes4) {
+		// verify data has at least 4 bytes to read
+		require(data.length >= 4, "bad selector");
+		// extract the selector (first 4 bytes as bytes4) using assembly
+		bytes4 selector;
+		assembly {
+		// load the first word after the length field
+			selector := mload(add(data, 32))
+		}
+		// return whatever we've loaded from the memory
+		return selector;
 	}
 
 	/// @dev Mimics the require(success, string(returndata))
