@@ -22,6 +22,7 @@ const {random_bn256} = require("@lazy-sol/a-missing-gem");
 
 // deployment routines in use
 const {
+	deploy_error_helper,
 	deploy_ownable_to_ac_adapter,
 	deploy_no_deps_ownable_to_ac_adapter,
 } = require("./include/deployment_routines");
@@ -136,6 +137,21 @@ contract("OwnableToAccessControlAdapter tests", function(accounts) {
 					expect(await adapter.accessRoles(fn_selector)).to.be.bignumber.that.equals(access_permission);
 				});
 			});
+		});
+	});
+	describe("after the Adapter is deployed, targeting to the ErrorHelper contract (custom execution error check)", function() {
+		let target, adapter;
+		beforeEach(async function() {
+			target = await deploy_error_helper(a0);
+			adapter = await deploy_no_deps_ownable_to_ac_adapter(a0, target);
+			await adapter.methods["updateAccessRole(string,uint256)"]("throwError(string)", 1, {from: a0});
+			await adapter.updateRole(a1, 1, {from: a0});
+		});
+
+		it("custom error string gets propagated from the target through the adapter", async function() {
+			const message = "Hello, World!";
+			const data = target.contract.methods.throwError(message).encodeABI();
+			await expectRevert(adapter.execute(data, {from: a1}), message);
 		});
 	});
 });

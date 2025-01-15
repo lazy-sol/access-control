@@ -216,7 +216,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 		(bool success, bytes memory result) = address(target).call{value: msg.value}(data);
 
 		// verify the execution completed successfully
-		require(success, "execution failed");
+		__requireSuccessfulCall(success, result);
 
 		// emit an event
 		emit ExecutionComplete(selector, data, result);
@@ -246,5 +246,31 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 		// msg.data contains full calldata: function selector + encoded function arguments (if any)
 		// delegate to `execute(bytes)`
 		execute(msg.data);
+	}
+
+	/// @dev Mimics the require(success, string(returndata))
+	function __requireSuccessfulCall(bool success, bytes memory returndata) private pure {
+		// if operation was not successful
+		if(!success) {
+			// revert, trying to deliver original error message from the low-level call,
+			// and falling back to "execution failed" if low-level call returned no message
+			__revert(returndata, "execution failed");
+		}
+	}
+
+	/// @dev Copied as is from OZ 4.9.6 @openzeppelin/contracts/utils/Address.sol::_revert(bytes,string)
+	function __revert(bytes memory returndata, string memory errorMessage) private pure {
+		// Look for revert reason and bubble it up if present
+		if(returndata.length > 0) {
+			// The easiest way to bubble the revert reason is using memory via assembly
+			/// @solidity memory-safe-assembly
+			assembly {
+				let returndata_size := mload(returndata)
+				revert(add(32, returndata), returndata_size)
+			}
+		}
+		else {
+			revert(errorMessage);
+		}
 	}
 }
