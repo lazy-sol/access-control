@@ -8,7 +8,7 @@ contract ErrorHelper {
 		owner = _owner;
 	}
 
-	function throwError(string memory message) public {
+	function throwError(string memory message) public pure {
 		require(false, message);
 	}
 }
