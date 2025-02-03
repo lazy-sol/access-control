@@ -6,11 +6,19 @@
  * @returns USDT ERC20 instance
  */
 async function deploy_usdt(a0) {
-	// smart contracts required
 	const USDTContract = artifacts.require("TetherToken");
-
-	// deploy the token and return the reference
 	return await USDTContract.new(0, "Tether USD", "USDT", 6, {from: a0});
+}
+
+/**
+ * Deploys ErrorHelper, which helps to throw arbitrary error string, used in tests
+ * 
+ * @param a0 deployer account
+ * @return ErrorHelper instance
+ */
+async function deploy_error_helper(a0) {
+	const ErrorHelper = artifacts.require("ErrorHelper");
+	return await ErrorHelper.new({from: a0});
 }
 
 /**
@@ -22,10 +30,7 @@ async function deploy_usdt(a0) {
  * @returns AccessControl instance
  */
 async function deploy_access_control(a0, owner = a0, features = 0) {
-	// deploy AccessControlMock
 	const AccessControlMock = artifacts.require("AccessControlMock");
-
-	// deploy and return the instance
 	return await AccessControlMock.new(owner, features, {from: a0});
 }
 
@@ -67,9 +72,7 @@ async function deploy_ownable_to_ac_adapter(a0, target) {
  * @returns OwnableToAccessControlAdapter instance
  */
 async function deploy_no_deps_ownable_to_ac_adapter(a0, target) {
-	// artifacts in use
 	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
-	// deploy and return the deployd instance
 	return await OwnableToAccessControlAdapter.new(target.address || target, a0, {from: a0});
 }
 
@@ -80,15 +83,14 @@ async function deploy_no_deps_ownable_to_ac_adapter(a0, target) {
  * @returns AdapterFactory instance
  */
 async function deploy_adapter_factory(a0) {
-	// artifacts in use
 	const AdapterFactory = artifacts.require("AdapterFactory");
-	// deploy and return the deployd instance
 	return await AdapterFactory.new(a0? {from: a0}: undefined);
 }
 
 /**
  * Deploys OwnableToAccessControlAdapter via the AdapterFactory
  * Deploys the AdapterFactory and target Ownable if required
+ * Transfers ownership from the target to the adapter
  *
  * @param a0 deployer address, target owner, required
  * @param factory AdapterFactory instance or address, optional
@@ -113,15 +115,7 @@ async function factory_deploy_ownable_to_ac_adapter(a0, factory, target) {
 	}
 
 	// deploy the adapter via the AdapterFactory
-	const receipt = await factory.deployNewOwnableToAccessControlAdapter(target.address, {from: a0});
-	const {
-		adapterAddress,
-		ownableTargetAddress,
-	} = receipt.logs.find(log => log.event === "NewOwnableToAccessControlAdapterDeployed").args;
-
-	// connect to the adapter
-	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
-	const adapter = await OwnableToAccessControlAdapter.at(adapterAddress);
+	const adapter = await factory_deploy_ownable_to_ac_adapter_pure(a0, factory, target);
 
 	// transfer ownership to the adapter
 	await target.transferOwnership(adapter.address, {from: a0});
@@ -130,12 +124,35 @@ async function factory_deploy_ownable_to_ac_adapter(a0, factory, target) {
 	return {factory, target, adapter};
 }
 
+/**
+ * Deploys OwnableToAccessControlAdapter via the AdapterFactory
+ *
+ * @param a0 deployer address, target owner, required
+ * @param factory AdapterFactory instance, required
+ * @param target Ownable instance or address, required
+ * @returns OwnableToAccessControlAdapter instance
+ */
+async function factory_deploy_ownable_to_ac_adapter_pure(a0, factory, target) {
+	// deploy the adapter via the AdapterFactory
+	const receipt = await factory.deployNewOwnableToAccessControlAdapter(target.address || target, {from: a0});
+	const {
+		adapterAddress,
+		ownableTargetAddress,
+	} = receipt.logs.find(log => log.event === "NewOwnableToAccessControlAdapterDeployed").args;
+
+	// connect to the adapter and return the result
+	const OwnableToAccessControlAdapter = artifacts.require("OwnableToAccessControlAdapter");
+	return await OwnableToAccessControlAdapter.at(adapterAddress);
+}
+
 // export public deployment API
 module.exports = {
 	deploy_usdt,
+	deploy_error_helper,
 	deploy_access_control,
 	deploy_no_deps_ownable_to_ac_adapter,
 	deploy_ownable_to_ac_adapter,
 	deploy_adapter_factory,
 	factory_deploy_ownable_to_ac_adapter,
+	factory_deploy_ownable_to_ac_adapter_pure,
 }

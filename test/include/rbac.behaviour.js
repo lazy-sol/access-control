@@ -62,6 +62,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 			if(owner !== ZERO_ADDRESS) {
 				it('"RoleUpdated(owner)" event is emitted correctly', async function() {
 					await expectEvent.inConstruction(access_control, "RoleUpdated", {
+						by: a0,
 						operator: owner,
 						requested: FULL_PRIVILEGES_MASK,
 						assigned: FULL_PRIVILEGES_MASK,
@@ -70,6 +71,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 			}
 			it('"RoleUpdated(this)" event is emitted correctly', async function() {
 				await expectEvent.inConstruction(access_control, "RoleUpdated", {
+					by: a0,
 					operator: access_control.address,
 					requested: features,
 					assigned: features,
@@ -134,6 +136,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: set,
 									assigned: set,
@@ -157,6 +160,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: not(remove),
 									assigned: not(remove),
@@ -182,6 +186,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: set,
 									assigned: "0",
@@ -206,6 +211,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: not(remove),
 									assigned: MAX_UINT256,
@@ -237,6 +243,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: set,
 									assigned: role.and(set),
@@ -261,6 +268,7 @@ function behavesLikeRBAC(deployment_fn, a0, a1, a2) {
 							});
 							it('"RoleUpdated" event', async function() {
 								expectEvent(receipt, "RoleUpdated", {
+									by,
 									operator: to_fn(to),
 									requested: not(remove),
 									assigned: not(role.and(remove)),

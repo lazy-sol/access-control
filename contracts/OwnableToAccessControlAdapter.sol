@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // breaking changes in .call() (0.5.0)
 // allow .call{}() (0.6.2)
-pragma solidity >=0.8.4;
+pragma solidity >=0.8.20;
 
 import "./AccessControl.sol";
 
@@ -71,7 +71,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 *
 	 * @dev Target contract must transfer its ownership to the AccessControl Adapter
 	 */
-	address public target;
+	address public immutable target;
 
 	/**
 	 * @dev Access roles mapping stores the roles required to access the functions on the
@@ -95,16 +95,17 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param selector selector of the function which corresponding access role was updated
 	 * @param role effective required role to execute the function defined by the selector
 	 */
-	event AccessRoleUpdated(bytes4 selector, uint256 role);
+	event AccessRoleUpdated(bytes4 indexed selector, uint256 role);
 
 	/**
 	 * @dev Logs function execution result on the target if the execution completed successfully
 	 *
 	 * @param selector selector of the function which was executed on the target contract
+	 * @param roleRequired role that was required to execute the function requested
 	 * @param data full calldata payload passed to the target contract (includes the 4-bytes selector)
 	 * @param result execution response from the target contract
 	 */
-	event ExecutionComplete(bytes4 selector, bytes data, bytes result);
+	event ExecutionComplete(bytes4 indexed selector, uint256 roleRequired, bytes data, bytes result);
 
 	/**
 	 * @dev Deploys an AccessControl Adapter binding it to the target OZ Ownable contract,
@@ -116,6 +117,7 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	constructor(address _target, address _owner) AccessControlCore(_owner, 0) { // visibility modifier is required to be compilable with 0.6.x
 		// verify the inputs
 		require(_target != address(0), "zero address");
+		require(_target.code.length != 0, "EOA");
 
 		// initialize internal contract state
 		target = _target;
@@ -132,9 +134,9 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param role role required to execute this function, or zero to disable
 	 *      access to the specified function for everyone
 	 */
-	function updateAccessRole(string memory signature, uint256 role) public {
-		// delegate to `updateAccessRole(bytes4, uint256)`
-		updateAccessRole(bytes4(keccak256(bytes(signature))), role);
+	function updateAccessRole(string memory signature, uint256 role) external {
+		// delegate to internal `_updateAccessRole(bytes4, uint256)`
+		__updateAccessRole(bytes4(keccak256(bytes(signature))), role);
 	}
 
 	/**
@@ -148,7 +150,23 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 * @param role role required to execute this function, or zero to disable
 	 *      access to the specified function for everyone
 	 */
-	function updateAccessRole(bytes4 selector, uint256 role) public {
+	function updateAccessRole(bytes4 selector, uint256 role) external {
+		// delegate to internal `_updateAccessRole(bytes4, uint256)`
+		__updateAccessRole(selector, role);
+	}
+
+	/**
+	 * @dev Updates the access role required to execute the function defined by its selector
+	 *      on the target contract
+	 *
+	 * @dev More on function signatures and selectors: https://docs.soliditylang.org/en/develop/abi-spec.html
+	 *
+	 * @param selector function selector on the target contract, for example
+	 *      0xf2fde38b selector corresponds to the "transferOwnership(address)" function
+	 * @param role role required to execute this function, or zero to disable
+	 *      access to the specified function for everyone
+	 */
+	function __updateAccessRole(bytes4 selector, uint256 role) private {
 		// verify the access permission
 		_requireSenderInRole(ROLE_ACCESS_ROLES_MANAGER);
 
@@ -175,34 +193,25 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 	 */
 	function execute(bytes memory data) public payable returns(bytes memory) {
 		// extract the selector (first 4 bytes as bytes4) using assembly
-		bytes4 selector;
-		assembly {
-			// load the first word after the length field
-			selector := mload(add(data, 32))
-		}
+		bytes4 selector = data.length == 0? bytes4(0x00000000): __extractSelector(data);
 
-		// zero data length means we're trying to execute the receive() function on
-		// the target and supply some ether to the target; in this case we don't need a security check
-		// if the data is present, we're executing some real function and must do a security check
-		if(data.length != 0) {
-			// determine the role required to access the function
-			uint256 roleRequired = accessRoles[selector];
+		// determine the role required to access the function
+		uint256 roleRequired = accessRoles[selector];
 
-			// verify function access role was already set
-			require(roleRequired != 0, "access role not set");
+		// verify function access role was already set
+		require(roleRequired != 0, "access role not set");
 
-			// verify the access permission
-			_requireSenderInRole(roleRequired);
-		}
+		// verify the access permission
+		_requireSenderInRole(roleRequired);
 
 		// execute the call on the target
 		(bool success, bytes memory result) = address(target).call{value: msg.value}(data);
 
 		// verify the execution completed successfully
-		require(success, "execution failed");
+		__requireSuccessfulCall(success, result);
 
 		// emit an event
-		emit ExecutionComplete(selector, data, result);
+		emit ExecutionComplete(selector, roleRequired, data, result);
 
 		// return the result
 		return result;
@@ -229,5 +238,45 @@ contract OwnableToAccessControlAdapter is AccessControlCore {
 		// msg.data contains full calldata: function selector + encoded function arguments (if any)
 		// delegate to `execute(bytes)`
 		execute(msg.data);
+	}
+
+	/// @dev Extracts first 4 bytes from the input, throwing if input is less than 4 bytes long
+	function __extractSelector(bytes memory data) private pure returns(bytes4) {
+		// verify data has at least 4 bytes to read
+		require(data.length >= 4, "bad selector");
+		// extract the selector (first 4 bytes as bytes4) using assembly
+		bytes4 selector;
+		assembly {
+		// load the first word after the length field
+			selector := mload(add(data, 32))
+		}
+		// return whatever we've loaded from the memory
+		return selector;
+	}
+
+	/// @dev Mimics the require(success, string(returndata))
+	function __requireSuccessfulCall(bool success, bytes memory returndata) private pure {
+		// if operation was not successful
+		if(!success) {
+			// revert, trying to deliver original error message from the low-level call,
+			// and falling back to "execution failed" if low-level call returned no message
+			__revert(returndata, "execution failed");
+		}
+	}
+
+	/// @dev Copied as is from OZ 4.9.6 @openzeppelin/contracts/utils/Address.sol::_revert(bytes,string)
+	function __revert(bytes memory returndata, string memory errorMessage) private pure {
+		// Look for revert reason and bubble it up if present
+		if(returndata.length > 0) {
+			// The easiest way to bubble the revert reason is using memory via assembly
+			/// @solidity memory-safe-assembly
+			assembly {
+				let returndata_size := mload(returndata)
+				revert(add(32, returndata), returndata_size)
+			}
+		}
+		else {
+			revert(errorMessage);
+		}
 	}
 }

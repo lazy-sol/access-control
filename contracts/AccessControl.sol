@@ -71,7 +71,7 @@ abstract contract AccessControl is AccessControlCore {
 	 * @param required set of features to check against
 	 * @return true if all the features requested are enabled, false otherwise
 	 */
-	function isFeatureEnabled(uint256 required) public view returns (bool) {
+	function isFeatureEnabled(uint256 required) external view returns (bool) {
 		// delegate to internal `_isFeatureEnabled`
 		return _isFeatureEnabled(required);
 	}
@@ -82,7 +82,7 @@ abstract contract AccessControl is AccessControlCore {
 	 * @param required set of permissions (role) to check against
 	 * @return true if all the permissions requested are enabled, false otherwise
 	 */
-	function isSenderInRole(uint256 required) public view returns (bool) {
+	function isSenderInRole(uint256 required) external view returns (bool) {
 		// delegate to internal `_isSenderInRole`
 		return _isSenderInRole(required);
 	}
@@ -94,7 +94,7 @@ abstract contract AccessControl is AccessControlCore {
 	 * @param required set of permissions (role) to check
 	 * @return true if all the permissions requested are enabled, false otherwise
 	 */
-	function isOperatorInRole(address operator, uint256 required) public view returns (bool) {
+	function isOperatorInRole(address operator, uint256 required) external view returns (bool) {
 		// delegate to internal `_isOperatorInRole`
 		return _isOperatorInRole(operator, required);
 	}
