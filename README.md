@@ -272,4 +272,4 @@ To execute the restricted access function on the target contract via the AccessC
 Please see the [Contribution Guide](./CONTRIBUTING.md) document to get understanding on how to report issues,
 contribute to the source code, fix bugs, introduce new features, etc.
 
-(c) 2017–2024 Basil Gorin
+(c) 2017–2025 Basil Gorin
