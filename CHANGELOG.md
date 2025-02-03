@@ -1,3 +1,7 @@
+v1.1.3: Prem's audit and its resolution
+- See the list of issues found and resolved in [the audit resolution doc](./audits/1.1_Prem_resolution.md)
+- See the audit methodology and issues found in [the original audit report](./audits/1.1_final_Prem.pdf)
+
 v1.1.2: do not enable full privileges to zero address on construction
 
 v1.1.1: Role-based Access Control (RBAC) Inspector

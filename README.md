@@ -4,6 +4,10 @@ A shortcut to a modular and easily pluggable dapp architecture.
 Enable the modular plug and play (PnP) architecture for your dapp by incorporating the role-based access control (RBAC)
 into the smart contracts.
 
+## Audit(s)
+* [v1.1 Audit by Prem, December 23, 2024 – January 20, 2025](./audits/1.1_final_Prem.pdf)
+    * [Resolution: v1.1 Audit by Prem](./audits/1.1_Prem_resolution.md)
+
 ## Technical Overview
 
 Role-based Access Control (RBAC), or simply Access Control, is the base parent contract to be inherited by other smart
