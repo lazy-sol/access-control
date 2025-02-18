@@ -6,7 +6,7 @@ into the smart contracts.
 
 ## Audit(s)
 * [v1.1 Audit by Prem, December 23, 2024 – January 20, 2025](./audits/1.1_final_Prem.pdf)
-    * [Resolution: v1.1 Audit by Prem](./audits/1.1_Prem_resolution.md)
+  * [Resolution: v1.1 Audit by Prem](./audits/1.1_Prem_resolution.md)
 
 ## Technical Overview
 
@@ -271,6 +271,10 @@ To execute the restricted access function on the target contract via the AccessC
 3.  To find **all** the addresses having any permissions, track the `RoleUpdated()` event and evaluate the history
     of `assiged` roles for every `operator` address
     * Alternatively, use the [tool](ui.html) which automates the process
+      (see demo [here](https://lazy-sol.github.io/access-control/ui.html))
+
+## See Also
+[Upgradeable Role-based Access Control (U-RBAC)](https://github.com/lazy-sol/access-control-upgradeable/blob/master/README.md)
 
 ## Contributing
 Please see the [Contribution Guide](./CONTRIBUTING.md) document to get understanding on how to report issues,
