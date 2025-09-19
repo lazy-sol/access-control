@@ -1,3 +1,10 @@
+v1.1.5: npm packages update
+- Resolved 12 vulnerabilities (6 low, 2 high, 4 critical)
+- Fixed some English grammar in the UI
+- Changed the display format of the connected address to checked summed
+
+v1.1.4: npm packages update
+
 v1.1.3: Prem's audit and its resolution
 - See the list of issues found and resolved in [the audit resolution doc](./audits/1.1_Prem_resolution.md)
 - See the audit methodology and issues found in [the original audit report](./audits/1.1_final_Prem.pdf)

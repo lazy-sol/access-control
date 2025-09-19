@@ -146,7 +146,7 @@ const CONF = {
 // due to the async nature of the app, many incoming events, it makes sense to follow
 // the state of the app by listening to all the events and updating the state
 const STATE = {
-	// currently connected network (recognized decimal Chain ID)
+	// the currently connected network (recognized decimal Chain ID)
 	chain_id: undefined,
 	// currently connected account (accounts[0])
 	A0: undefined,
@@ -158,14 +158,14 @@ const STATE = {
 	update_chain_id: function(chain_id) {
 		this.chain_id = chain_id? parseInt(chain_id): undefined;
 	},
-	// function to update currently connected account
+	// function to update the currently connected account
 	update_A0: function(accounts) {
 		// MetaMask is locked or not connected
 		if(!accounts || !accounts.length) {
 			this.A0 = undefined;
 		}
 		else {
-			[this.A0] = accounts;
+			[this.A0] = accounts.map(web3.utils.toChecksumAddress);
 		}
 	},
 	// function to refresh the connection state UI
@@ -223,7 +223,7 @@ function metamask_connect() {
 
 // check if MetaMask is connected
 ethereum.request({ method: 'eth_accounts' }).then(function(accounts) {
-	// check current connected network
+	// check the current connected network
 	ethereum.request({ method: 'eth_chainId' }).then(function(chain_id) {
 		STATE.update_chain_id(chain_id);
 		STATE.update_A0(accounts);
@@ -263,7 +263,7 @@ ethereum.on('disconnect', function(error) {
 
 // network switch listener
 ethereum.on('chainChanged', function(chain_id) {
-	console.log('network has been changed', chain_id)
+	console.log('the network has been changed', chain_id)
 	STATE.update_chain_id(chain_id);
 	STATE.refresh_ui();
 	reload_main_app();
