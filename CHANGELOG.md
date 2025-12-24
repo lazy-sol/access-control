@@ -1,3 +1,7 @@
+v1.1.6: npm packages update
+- Updated outdated npm dependencies to the latest versions
+- Removed stray ABI method probe causing failures on Base in the UI
+
 v1.1.5: npm packages update
 - Resolved 12 vulnerabilities (6 low, 2 high, 4 critical)
 - Fixed some English grammar in the UI

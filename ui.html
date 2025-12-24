@@ -447,7 +447,6 @@ async function extract_rbac_features_roles(target_address) {
 	}));
 
 	let features = 0;
-	v0_contract.methods["userRoles"]();
 
 	const roles = {};
 	assignments.forEach(function({operator, assigned}) {
